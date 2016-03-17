@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.logging.Level;
@@ -54,7 +55,7 @@ public interface Util {
         return strings.get(0);
     }
 
-    public static List<String> listFiles(String path, boolean recursive) {
+    public static List<String> listFiles(String path, boolean recursive, String... acceptedEndings) {
         List<String> files = new ArrayList<>();
         File file = new File(path);
         if (file.isDirectory()) {
@@ -62,13 +63,13 @@ public interface Util {
             directories.add(file);
             while (!directories.isEmpty()) {
                 file = directories.poll();
-                for (File listFile : file.listFiles()) {
-                    if (listFile.isDirectory() && recursive) {
-                        directories.add(listFile);
-                    } else if (listFile.isFile()
-                            && (listFile.getName().endsWith(".jpg")
-                            || listFile.getName().endsWith(".jpeg"))) {
-                        files.add(path);
+                for (File child : file.listFiles()) {
+                    if (child.isDirectory() && recursive) {
+                        directories.add(child);
+                    } else if (child.isFile()
+                            && (Arrays.stream(acceptedEndings).anyMatch(child.getName()::endsWith)
+                            || acceptedEndings.length == 0)) {
+                        files.add(child.getPath());
                     }
                 }
             }

@@ -43,7 +43,7 @@ public class ImageClassifier {
     }
 
     public void trainMatcher(String name, String path, boolean recursivly, boolean grayscale) {
-        trainMatcher(name, Util.listFiles(path, recursivly), grayscale);
+        trainMatcher(name, Util.listFiles(path, recursivly, ".jpg", ".jpeg", ".png", ".gif"), grayscale);
     }
 
     public void trainMatcher(String name, List<String> images, boolean grayscale) {
@@ -59,6 +59,10 @@ public class ImageClassifier {
             descriptor.release();
         });
     }
+    
+    public void trainMatcherWithDescriptors(String name, String descriptors, boolean recursivly) {
+        trainMatcherWithDescriptors(name, Util.listFiles(descriptors, recursivly, ".descr"));
+    }
 
     public void trainMatcherWithDescriptors(String name, List<String> descriptors) {
         List<Mat> descriptorList = new ArrayList<>();
@@ -69,14 +73,17 @@ public class ImageClassifier {
     }
 
     public void precomputeDescriptors(String inputPath, boolean recursivly, String outputPath, boolean grayscale) {
-        precomputeDescriptors(Util.listFiles(inputPath, recursivly), outputPath, grayscale);
+        precomputeDescriptors(Util.listFiles(inputPath, recursivly, ".jpg", ".jpeg", ".png", ".gif"), outputPath, grayscale);
     }
 
     public void precomputeDescriptors(List<String> images, String outputPath, boolean grayscale) {
         List<Mat> descriptors = surfDescriptorExtractor.detectAndCompute(images, grayscale);
         String baseDir = Util.longestCommonPrefix(images);
+        if(!outputPath.endsWith("/")) {
+            outputPath += "/";
+        }
         for (int i = 0; i < images.size(); i++) {
-            Util.saveMat(images.get(i).replaceFirst(baseDir, ""), descriptors.get(i));
+            Util.saveMat(outputPath+images.get(i).replaceFirst(baseDir, "")+".descr", descriptors.get(i));
             descriptors.get(i).release();
         }
     }
