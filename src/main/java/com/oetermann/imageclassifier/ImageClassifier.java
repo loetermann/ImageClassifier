@@ -42,8 +42,20 @@ public class ImageClassifier {
         this.flannMatchers = new HashMap<>();
     }
 
-    public void trainMatcher(String name, String path, boolean recursivly, boolean grayscale) {
-        trainMatcher(name, Util.listFiles(path, recursivly, ".jpg", ".jpeg", ".png", ".gif"), grayscale);
+    public void trainMatcher(String name, boolean recursivly, boolean grayscale, String... paths) {
+        List<String> imgPaths = new ArrayList<>();
+        for (String path : paths) {
+            imgPaths.addAll(Util.listFiles(path, recursivly, ".jpg", ".jpeg", ".png", ".gif"));
+        }
+        trainMatcher(name, imgPaths, grayscale);
+    }
+    
+    public void trainMatcher(String name, List<String> paths, boolean recursivly, boolean grayscale) {
+        List<String> imgPaths = new ArrayList<>();
+        paths.stream().forEach((path) -> {
+            imgPaths.addAll(Util.listFiles(path, recursivly, ".jpg", ".jpeg", ".png", ".gif"));
+        });
+        trainMatcher(name, imgPaths, grayscale);
     }
 
     public void trainMatcher(String name, List<String> images, boolean grayscale) {
@@ -60,8 +72,20 @@ public class ImageClassifier {
         });
     }
     
-    public void trainMatcherWithDescriptors(String name, String descriptors, boolean recursivly) {
-        trainMatcherWithDescriptors(name, Util.listFiles(descriptors, recursivly, ".descr"));
+    public void trainMatcherWithDescriptors(String name, boolean recursivly, String... descriptors) {
+        List<String> descriptorFiles = new ArrayList<>();
+        for (String descriptor : descriptors) {
+            descriptorFiles.addAll(Util.listFiles(descriptor, recursivly, ".descr"));
+        }
+        trainMatcherWithDescriptors(name, descriptorFiles);
+    }
+    
+    public void trainMatcherWithDescriptors(String name, List<String> descriptors, boolean recursivly) {
+        List<String> descriptorFiles = new ArrayList<>();
+        descriptors.stream().forEach((path) -> {
+            descriptorFiles.addAll(Util.listFiles(path, recursivly, ".descr"));
+        });
+        trainMatcherWithDescriptors(name, descriptorFiles);
     }
 
     public void trainMatcherWithDescriptors(String name, List<String> descriptors) {
@@ -72,8 +96,21 @@ public class ImageClassifier {
         trainMatcher(name, descriptors, descriptorList);
     }
 
-    public void precomputeDescriptors(String inputPath, boolean recursivly, String outputPath, boolean grayscale) {
-        precomputeDescriptors(Util.listFiles(inputPath, recursivly, ".jpg", ".jpeg", ".png", ".gif"), outputPath, grayscale);
+    public void precomputeDescriptors(boolean recursivly, String outputPath, boolean grayscale, String... inputPaths) {
+        List<String> images = new ArrayList<>();
+        
+        for (String inputPath : inputPaths) {
+            images.addAll(Util.listFiles(inputPath, recursivly, ".jpg", ".jpeg", ".png", ".gif"));
+        }
+        precomputeDescriptors(images, outputPath, grayscale);
+    }
+    
+    public void precomputeDescriptors(List<String> inputPaths, boolean recursivly, String outputPath, boolean grayscale) {
+        List<String> images = new ArrayList<>();
+        inputPaths.stream().forEach((path) -> {
+            images.addAll(Util.listFiles(path, recursivly, ".jpg", ".jpeg", ".png", ".gif"));
+        });
+        precomputeDescriptors(images, outputPath, grayscale);
     }
 
     public void precomputeDescriptors(List<String> images, String outputPath, boolean grayscale) {
