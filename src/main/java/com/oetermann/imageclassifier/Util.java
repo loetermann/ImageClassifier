@@ -122,7 +122,7 @@ public interface Util {
             }
         } catch (IOException | ClassCastException ex) {
             System.err.println("ERROR: Could not save mat to file: " + path);
-            Logger.getLogger(ImageClassifier.class.getName()).log(Level.SEVERE, null, ex);
+//            Logger.getLogger(ImageClassifier.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
 
@@ -159,7 +159,7 @@ public interface Util {
             return mat;
         } catch (IOException | ClassNotFoundException | ClassCastException ex) {
             System.err.println("ERROR: Could not load mat from file: " + path);
-            Logger.getLogger(ImageClassifier.class.getName()).log(Level.SEVERE, null, ex);
+//            Logger.getLogger(ImageClassifier.class.getName()).log(Level.SEVERE, null, ex);
         }
         return null;
     }

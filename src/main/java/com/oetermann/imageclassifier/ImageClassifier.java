@@ -29,7 +29,7 @@ import org.opencv.core.Mat;
 public class ImageClassifier {
 
     public static final int NO_MATCH = -1, UNKOWN_MATCHER = -2;
-    
+
     static {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
     }
@@ -49,8 +49,8 @@ public class ImageClassifier {
         }
         trainMatcher(name, imgPaths, grayscale);
     }
-    
-    public void trainMatcher(String name, List<String> paths, boolean recursivly, boolean grayscale) {
+
+    public void trainMatcher(String name, boolean recursivly, boolean grayscale, List<String> paths) {
         List<String> imgPaths = new ArrayList<>();
         paths.stream().forEach((path) -> {
             imgPaths.addAll(Util.listFiles(path, recursivly, ".jpg", ".jpeg", ".png", ".gif"));
@@ -71,7 +71,7 @@ public class ImageClassifier {
             descriptor.release();
         });
     }
-    
+
     public void trainMatcherWithDescriptors(String name, boolean recursivly, String... descriptors) {
         List<String> descriptorFiles = new ArrayList<>();
         for (String descriptor : descriptors) {
@@ -79,8 +79,8 @@ public class ImageClassifier {
         }
         trainMatcherWithDescriptors(name, descriptorFiles);
     }
-    
-    public void trainMatcherWithDescriptors(String name, List<String> descriptors, boolean recursivly) {
+
+    public void trainMatcherWithDescriptors(String name, boolean recursivly, List<String> descriptors) {
         List<String> descriptorFiles = new ArrayList<>();
         descriptors.stream().forEach((path) -> {
             descriptorFiles.addAll(Util.listFiles(path, recursivly, ".descr"));
@@ -91,21 +91,24 @@ public class ImageClassifier {
     public void trainMatcherWithDescriptors(String name, List<String> descriptors) {
         List<Mat> descriptorList = new ArrayList<>();
         descriptors.stream().forEach((descriptor) -> {
-            descriptorList.add(Util.loadMat(descriptor));
+            Mat descriptorMat = Util.loadMat(descriptor);
+            if (descriptorMat != null) {
+                descriptorList.add(descriptorMat);
+            }
         });
         trainMatcher(name, descriptors, descriptorList);
     }
 
     public void precomputeDescriptors(boolean recursivly, String outputPath, boolean grayscale, String... inputPaths) {
         List<String> images = new ArrayList<>();
-        
+
         for (String inputPath : inputPaths) {
             images.addAll(Util.listFiles(inputPath, recursivly, ".jpg", ".jpeg", ".png", ".gif"));
         }
         precomputeDescriptors(images, outputPath, grayscale);
     }
-    
-    public void precomputeDescriptors(List<String> inputPaths, boolean recursivly, String outputPath, boolean grayscale) {
+
+    public void precomputeDescriptors(boolean recursivly, String outputPath, boolean grayscale, List<String> inputPaths) {
         List<String> images = new ArrayList<>();
         inputPaths.stream().forEach((path) -> {
             images.addAll(Util.listFiles(path, recursivly, ".jpg", ".jpeg", ".png", ".gif"));
@@ -116,21 +119,21 @@ public class ImageClassifier {
     public void precomputeDescriptors(List<String> images, String outputPath, boolean grayscale) {
         List<Mat> descriptors = surfDescriptorExtractor.detectAndCompute(images, grayscale);
         String baseDir = Util.longestCommonPrefix(images);
-        if(!outputPath.endsWith("/")) {
+        if (!outputPath.endsWith("/")) {
             outputPath += "/";
         }
         for (int i = 0; i < images.size(); i++) {
-            Util.saveMat(outputPath+images.get(i).replaceFirst(baseDir, "")+".descr", descriptors.get(i));
+            Util.saveMat(outputPath + images.get(i).replaceFirst(baseDir, "") + ".descr", descriptors.get(i));
             descriptors.get(i).release();
         }
     }
-    
+
     public int match(String matcherName, Mat queryImage) {
         return match(matcherName, queryImage, 22);
     }
-    
+
     public int match(String matcherName, Mat queryImage, int minMatches) {
-        if(!flannMatchers.containsKey(matcherName)) {
+        if (!flannMatchers.containsKey(matcherName)) {
             return UNKOWN_MATCHER;
         }
         Mat queryDescriptors = surfDescriptorExtractor.detectAndCompute(queryImage);
@@ -138,10 +141,10 @@ public class ImageClassifier {
         queryDescriptors.release();
         return match;
     }
-        
+
     public String matchName(String matcherName, Mat queryImage, int minMatches) {
-        if(!flannMatchers.containsKey(matcherName)) {
-            return "Unkown Matcher: "+matcherName;
+        if (!flannMatchers.containsKey(matcherName)) {
+            return "Unkown Matcher: " + matcherName;
         }
         return flannMatchers.get(matcherName).nameOf(match(matcherName, queryImage, minMatches));
     }
