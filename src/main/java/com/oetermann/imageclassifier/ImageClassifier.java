@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.List;
 import org.opencv.core.Core;
 import org.opencv.core.Mat;
+import org.opencv.imgproc.Imgproc;
 
 /**
  *
@@ -34,16 +35,16 @@ public class ImageClassifier {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
     }
 
-    private final DescriptorExtractorWrapper surfDescriptorExtractor;
+    private final DescriptorExtractorWrapper descriptorExtractorWrapper;
     private final HashMap<String, MatchFinderWrapper> flannMatchers;
 
     public ImageClassifier(int detectorType, int extractorType) {
-        this.surfDescriptorExtractor = new DescriptorExtractorWrapper(detectorType, extractorType);
+        this.descriptorExtractorWrapper = new DescriptorExtractorWrapper(detectorType, extractorType);
         this.flannMatchers = new HashMap<>();
     }
     
     public ImageClassifier() {
-        this.surfDescriptorExtractor = new DescriptorExtractorWrapper();
+        this.descriptorExtractorWrapper = new DescriptorExtractorWrapper();
         this.flannMatchers = new HashMap<>();
     }
 
@@ -64,7 +65,7 @@ public class ImageClassifier {
     }
 
     public void trainMatcher(String name, List<String> images, boolean grayscale) {
-        trainMatcher(name, images, surfDescriptorExtractor.detectAndCompute(images, grayscale));
+        trainMatcher(name, images, descriptorExtractorWrapper.detectAndCompute(images, grayscale));
     }
 
     public void trainMatcher(String name, List<String> files, List<Mat> descriptors) {
@@ -122,7 +123,7 @@ public class ImageClassifier {
     }
 
     public void precomputeDescriptors(List<String> images, String outputPath, boolean grayscale) {
-        List<Mat> descriptors = surfDescriptorExtractor.detectAndCompute(images, grayscale);
+        List<Mat> descriptors = descriptorExtractorWrapper.detectAndCompute(images, grayscale);
         String baseDir = Util.longestCommonPrefix(images);
         if (!outputPath.endsWith("/")) {
             outputPath += "/";
@@ -141,13 +142,14 @@ public class ImageClassifier {
         if (!flannMatchers.containsKey(matcherName)) {
             return UNKOWN_MATCHER;
         }
-        long t = System.currentTimeMillis();
-        Mat queryDescriptors = surfDescriptorExtractor.detectAndCompute(queryImage);
-        System.out.println("SURF: "+(System.currentTimeMillis()-t));
-        t = System.currentTimeMillis();
+        Imgproc.equalizeHist(queryImage, queryImage);
+//        long t = System.currentTimeMillis();
+        Mat queryDescriptors = descriptorExtractorWrapper.detectAndCompute(queryImage);
+//        System.out.println("SURF: "+(System.currentTimeMillis()-t));
+//        t = System.currentTimeMillis();
         int match = flannMatchers.get(matcherName).bestMatch(queryDescriptors, minMatches);
         queryDescriptors.release();
-        System.out.println("FLANN: "+(System.currentTimeMillis()-t));
+//        System.out.println("FLANN: "+(System.currentTimeMillis()-t));
         return match;
     }
 

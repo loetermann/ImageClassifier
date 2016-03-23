@@ -71,26 +71,27 @@ public class MatchFinderWrapper {
         MatOfDMatch matches = new MatOfDMatch();
         matcher.match(queryDescriptors, matches);
         queryDescriptors.empty(); // Attempt to stop GC from releasing mat
-        Arrays.fill(matchesPerImage, (short) 0);
+        Arrays.fill(matchesPerImage, 0);
         DMatch[] matchesArray = matches.toArray();
         for (DMatch match : matchesArray) {
 //            match.distance;
             if (match.distance > 1) {
-                match.distance = match.distance / 10000 - 1f;
+                match.distance = match.distance / 1000;
             }
-            if (match.distance < 0.5) {
-                matchesPerImage[match.imgIdx] += 0.5 - match.distance;
+            if (match.distance < 1) {
+                matchesPerImage[match.imgIdx] += 1 - match.distance;
             }
 //            matchesPerImage[match.imgIdx] += 1;
-//            System.out.println("ImgIndex: "+ match.imgIdx + " TrainIndex: " + match.trainIdx +" MatchDistance: "+match.distance);
+//            System.out.println("MatchDistance: "+match.distance + "\t\tImage: "+ imageNames[match.imgIdx]);
         }
         int index = 0;
         for (int i = 0; i < matchesPerImage.length; i++) {
-            System.out.println("Image #" + i + " has " + matchesPerImage[i] + " matches");
+//            System.out.println(matchesPerImage[i] + "\t\tmatches for image " + imageNames[i]);
             if (matchesPerImage[i] > matchesPerImage[index]) {
                 index = i;
             }
         }
+//        System.out.println("Total Matches: "+matches.size());
         if (matchesPerImage[index] >= minMatches) {
             return index;
         }
