@@ -18,6 +18,7 @@ package com.oetermann.imageclassifier;
 
 import java.util.Arrays;
 import java.util.List;
+import org.opencv.core.CvType;
 import org.opencv.core.DMatch;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfDMatch;
@@ -27,41 +28,46 @@ import org.opencv.features2d.DescriptorMatcher;
  *
  * @author Lars Oetermann <lars.oetermann.com>
  */
-public class FlannMatchFinder {
+public class MatchFinderWrapper {
 
     private final DescriptorMatcher matcher;
     private final String[] imageNames;
-    private final short[] matchesPerImage;
+    private final double[] matchesPerImage;
 
-    public FlannMatchFinder(String fromFile) {
+    public MatchFinderWrapper(String fromFile) {
         matcher = DescriptorMatcher.create(DescriptorMatcher.FLANNBASED);
         matcher.read(fromFile);
-        this.matchesPerImage = new short[matcher.getTrainDescriptors().size()];
+        this.matchesPerImage = new double[matcher.getTrainDescriptors().size()];
         imageNames = new String[matcher.getTrainDescriptors().size()];
         for (int i = 0; i < imageNames.length; i++) {
-            imageNames[i] = "Image#"+i;
+            imageNames[i] = "Image#" + i;
         }
     }
 
-    public FlannMatchFinder(List<String> images, List<Mat> descriptors) {
+    public MatchFinderWrapper(List<String> images, List<Mat> descriptors) {
         matcher = DescriptorMatcher.create(DescriptorMatcher.FLANNBASED);
+        descriptors.stream().forEach((descriptor) -> {
+            descriptor.convertTo(descriptor, CvType.CV_32F);
+        });
         matcher.add(descriptors);
         matcher.train();
-        matchesPerImage = new short[descriptors.size()];
+        matchesPerImage = new double[descriptors.size()];
         imageNames = new String[images.size()];
         for (int i = 0; i < images.size(); i++) {
-            imageNames[i] = images.get(i).substring(images.get(i).lastIndexOf('/')+1);
+            String name = images.get(i);
+            imageNames[i] = name.substring(name.lastIndexOf('/') + 1, name.contains(".descr") ? name.indexOf(".descr") : name.length());
         }
     }
-    
+
     public String nameOf(int i) {
-        if(i < 0) {
+        if (i < 0) {
             return "No match found.";
         }
         return imageNames[i];
     }
 
     public int bestMatch(Mat queryDescriptors, int minMatches) {
+        queryDescriptors.convertTo(queryDescriptors, CvType.CV_32F);
         MatOfDMatch matches = new MatOfDMatch();
         matcher.match(queryDescriptors, matches);
         queryDescriptors.empty(); // Attempt to stop GC from releasing mat
@@ -69,11 +75,18 @@ public class FlannMatchFinder {
         DMatch[] matchesArray = matches.toArray();
         for (DMatch match : matchesArray) {
 //            match.distance;
-            matchesPerImage[match.imgIdx]++;
+            if (match.distance > 1) {
+                match.distance = match.distance / 10000 - 1f;
+            }
+            if (match.distance < 0.5) {
+                matchesPerImage[match.imgIdx] += 0.5 - match.distance;
+            }
+//            matchesPerImage[match.imgIdx] += 1;
+//            System.out.println("ImgIndex: "+ match.imgIdx + " TrainIndex: " + match.trainIdx +" MatchDistance: "+match.distance);
         }
         int index = 0;
         for (int i = 0; i < matchesPerImage.length; i++) {
-//            System.out.println("Image #"+i+" has "+matchesPerImage[i]+" matches");
+            System.out.println("Image #" + i + " has " + matchesPerImage[i] + " matches");
             if (matchesPerImage[i] > matchesPerImage[index]) {
                 index = i;
             }
@@ -90,7 +103,7 @@ public class FlannMatchFinder {
         });
         matcher.clear();
     }
-    
+
     public void save(String toFile) {
         matcher.write(toFile);
     }

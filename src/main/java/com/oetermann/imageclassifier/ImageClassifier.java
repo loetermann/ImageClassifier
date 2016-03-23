@@ -34,11 +34,16 @@ public class ImageClassifier {
         System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
     }
 
-    private final SurfDescriptorExtractor surfDescriptorExtractor;
-    private final HashMap<String, FlannMatchFinder> flannMatchers;
+    private final DescriptorExtractorWrapper surfDescriptorExtractor;
+    private final HashMap<String, MatchFinderWrapper> flannMatchers;
 
+    public ImageClassifier(int detectorType, int extractorType) {
+        this.surfDescriptorExtractor = new DescriptorExtractorWrapper(detectorType, extractorType);
+        this.flannMatchers = new HashMap<>();
+    }
+    
     public ImageClassifier() {
-        this.surfDescriptorExtractor = new SurfDescriptorExtractor();
+        this.surfDescriptorExtractor = new DescriptorExtractorWrapper();
         this.flannMatchers = new HashMap<>();
     }
 
@@ -66,7 +71,7 @@ public class ImageClassifier {
         if (flannMatchers.containsKey(name)) {
             flannMatchers.get(name).release();
         }
-        flannMatchers.put(name, new FlannMatchFinder(files, descriptors));
+        flannMatchers.put(name, new MatchFinderWrapper(files, descriptors));
         descriptors.stream().forEach((descriptor) -> {
             descriptor.release();
         });
@@ -136,9 +141,13 @@ public class ImageClassifier {
         if (!flannMatchers.containsKey(matcherName)) {
             return UNKOWN_MATCHER;
         }
+        long t = System.currentTimeMillis();
         Mat queryDescriptors = surfDescriptorExtractor.detectAndCompute(queryImage);
+        System.out.println("SURF: "+(System.currentTimeMillis()-t));
+        t = System.currentTimeMillis();
         int match = flannMatchers.get(matcherName).bestMatch(queryDescriptors, minMatches);
         queryDescriptors.release();
+        System.out.println("FLANN: "+(System.currentTimeMillis()-t));
         return match;
     }
 

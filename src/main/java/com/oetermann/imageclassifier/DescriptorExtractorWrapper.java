@@ -31,14 +31,18 @@ import org.opencv.imgproc.Imgproc;
  *
  * @author Lars Oetermann <lars.oetermann.com>
  */
-public class SurfDescriptorExtractor {
+public class DescriptorExtractorWrapper {
 
     private final FeatureDetector featureDetector;
     private final DescriptorExtractor descriptorExtractor;
 
-    public SurfDescriptorExtractor() {
-        featureDetector = FeatureDetector.create(FeatureDetector.SURF);
-        descriptorExtractor = DescriptorExtractor.create(DescriptorExtractor.SURF);
+    public DescriptorExtractorWrapper(int detectorType, int extractorType) {
+        featureDetector = FeatureDetector.create(detectorType);
+        descriptorExtractor = DescriptorExtractor.create(extractorType);
+    }
+    
+    public DescriptorExtractorWrapper() {
+        this(FeatureDetector.ORB, FeatureDetector.ORB);
     }
 
     public List<Mat> readImages(List<String> files, boolean grayscale) {
