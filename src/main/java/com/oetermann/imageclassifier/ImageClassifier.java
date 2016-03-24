@@ -19,9 +19,10 @@ package com.oetermann.imageclassifier;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import org.opencv.core.Core;
-import org.opencv.core.Mat;
-import org.opencv.imgproc.Imgproc;
+import org.bytedeco.javacpp.opencv_core;
+import org.bytedeco.javacpp.opencv_core.Mat;
+import org.bytedeco.javacpp.opencv_core.MatVector;
+import org.bytedeco.javacpp.opencv_imgproc;
 
 /**
  *
@@ -31,18 +32,14 @@ public class ImageClassifier {
 
     public static final int NO_MATCH = -1, UNKOWN_MATCHER = -2;
 
-    static {
-        System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
-    }
-
     private final DescriptorExtractorWrapper descriptorExtractorWrapper;
     private final HashMap<String, MatchFinderWrapper> flannMatchers;
 
-    public ImageClassifier(int detectorType, int extractorType) {
-        this.descriptorExtractorWrapper = new DescriptorExtractorWrapper(detectorType, extractorType);
+    public ImageClassifier(String extractorType) {
+        this.descriptorExtractorWrapper = new DescriptorExtractorWrapper(extractorType);
         this.flannMatchers = new HashMap<>();
     }
-    
+
     public ImageClassifier() {
         this.descriptorExtractorWrapper = new DescriptorExtractorWrapper();
         this.flannMatchers = new HashMap<>();
@@ -68,14 +65,14 @@ public class ImageClassifier {
         trainMatcher(name, images, descriptorExtractorWrapper.detectAndCompute(images, grayscale));
     }
 
-    public void trainMatcher(String name, List<String> files, List<Mat> descriptors) {
+    public void trainMatcher(String name, List<String> files, MatVector descriptors) {
         if (flannMatchers.containsKey(name)) {
-            flannMatchers.get(name).release();
+//            flannMatchers.get(name).release();
         }
         flannMatchers.put(name, new MatchFinderWrapper(files, descriptors));
-        descriptors.stream().forEach((descriptor) -> {
-            descriptor.release();
-        });
+//        descriptors.stream().forEach((descriptor) -> {
+//            descriptor.release();
+//        });
     }
 
     public void trainMatcherWithDescriptors(String name, boolean recursivly, String... descriptors) {
@@ -95,13 +92,16 @@ public class ImageClassifier {
     }
 
     public void trainMatcherWithDescriptors(String name, List<String> descriptors) {
-        List<Mat> descriptorList = new ArrayList<>();
-        descriptors.stream().forEach((descriptor) -> {
+        MatVector descriptorList = new MatVector(descriptors.size());
+        long i = 0;
+        for (String descriptor : descriptors) {
             Mat descriptorMat = Util.loadMat(descriptor);
             if (descriptorMat != null) {
-                descriptorList.add(descriptorMat);
+                descriptorList.put(i, descriptorMat);
+                i++;
             }
-        });
+        }
+        descriptorList.resize(i);
         trainMatcher(name, descriptors, descriptorList);
     }
 
@@ -123,7 +123,7 @@ public class ImageClassifier {
     }
 
     public void precomputeDescriptors(List<String> images, String outputPath, boolean grayscale) {
-        List<Mat> descriptors = descriptorExtractorWrapper.detectAndCompute(images, grayscale);
+        MatVector descriptors = descriptorExtractorWrapper.detectAndCompute(images, grayscale);
         String baseDir = Util.longestCommonPrefix(images);
         if (!outputPath.endsWith("/")) {
             outputPath += "/";
@@ -142,7 +142,9 @@ public class ImageClassifier {
         if (!flannMatchers.containsKey(matcherName)) {
             return UNKOWN_MATCHER;
         }
-        Imgproc.equalizeHist(queryImage, queryImage);
+        if (queryImage.type() == opencv_core.CV_8U) {
+            opencv_imgproc.equalizeHist(queryImage, queryImage);
+        }
 //        long t = System.currentTimeMillis();
         Mat queryDescriptors = descriptorExtractorWrapper.detectAndCompute(queryImage);
 //        System.out.println("SURF: "+(System.currentTimeMillis()-t));
@@ -158,6 +160,10 @@ public class ImageClassifier {
             return "Unkown Matcher: " + matcherName;
         }
         return flannMatchers.get(matcherName).nameOf(match(matcherName, queryImage, minMatches));
+    }
+
+    public String matchName(String matcherName, byte[] jpegByte, int minMatches) {
+        return matchName(matcherName, Util.fromByteJPEG(jpegByte, false), minMatches);
     }
 
 }

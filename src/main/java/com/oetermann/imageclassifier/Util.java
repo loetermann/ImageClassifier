@@ -28,8 +28,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.opencv.core.CvType;
-import org.opencv.core.Mat;
+import org.bytedeco.javacpp.opencv_core.Mat;
+import org.bytedeco.javacpp.opencv_imgcodecs;
 
 /**
  *
@@ -86,33 +86,34 @@ public interface Util {
             int rows = mat.rows();
             int cols = mat.cols();
             int type = mat.type();
-            Object data;
-            switch (mat.type()) {
-                case CvType.CV_8S:
-                case CvType.CV_8U:
-                    data = new byte[(int) mat.total() * mat.channels()];
-                    mat.get(0, 0, (byte[]) data);
-                    break;
-                case CvType.CV_16S:
-                case CvType.CV_16U:
-                    data = new short[(int) mat.total() * mat.channels()];
-                    mat.get(0, 0, (short[]) data);
-                    break;
-                case CvType.CV_32S:
-                    data = new int[(int) mat.total() * mat.channels()];
-                    mat.get(0, 0, (int[]) data);
-                    break;
-                case CvType.CV_32F:
-                    data = new float[(int) mat.total() * mat.channels()];
-                    mat.get(0, 0, (float[]) data);
-                    break;
-                case CvType.CV_64F:
-                    data = new double[(int) mat.total() * mat.channels()];
-                    mat.get(0, 0, (double[]) data);
-                    break;
-                default:
-                    data = null;
-            }
+            byte[] data = new byte[cols*rows*mat.channels()];
+            mat.data().get(data);
+//            switch (mat.type()) {
+//                case CvType.CV_8S:
+//                case CvType.CV_8U:
+//                    data = new byte[(int) mat.total() * mat.channels()];
+//                    mat.get(0, 0, (byte[]) data);
+//                    break;
+//                case CvType.CV_16S:
+//                case CvType.CV_16U:
+//                    data = new short[(int) mat.total() * mat.channels()];
+//                    mat.get(0, 0, (short[]) data);
+//                    break;
+//                case CvType.CV_32S:
+//                    data = new int[(int) mat.total() * mat.channels()];
+//                    mat.get(0, 0, (int[]) data);
+//                    break;
+//                case CvType.CV_32F:
+//                    data = new float[(int) mat.total() * mat.channels()];
+//                    mat.get(0, 0, (float[]) data);
+//                    break;
+//                case CvType.CV_64F:
+//                    data = new double[(int) mat.total() * mat.channels()];
+//                    mat.get(0, 0, (double[]) data);
+//                    break;
+//                default:
+//                    data = null;
+//            }
             try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(path))) {
                 oos.writeObject(rows);
                 oos.writeObject(cols);
@@ -129,39 +130,45 @@ public interface Util {
     public static Mat loadMat(String path) {
         try {
             int rows, cols, type;
-            Object data;
+            byte[] data;
             try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(path))) {
                 rows = (int) ois.readObject();
                 cols = (int) ois.readObject();
                 type = (int) ois.readObject();
-                data = ois.readObject();
+                data = (byte[]) ois.readObject();
             }
             Mat mat = new Mat(rows, cols, type);
-            switch (type) {
-                case CvType.CV_8S:
-                case CvType.CV_8U:
-                    mat.put(0, 0, (byte[]) data);
-                    break;
-                case CvType.CV_16S:
-                case CvType.CV_16U:
-                    mat.put(0, 0, (short[]) data);
-                    break;
-                case CvType.CV_32S:
-                    mat.put(0, 0, (int[]) data);
-                    break;
-                case CvType.CV_32F:
-                    mat.put(0, 0, (float[]) data);
-                    break;
-                case CvType.CV_64F:
-                    mat.put(0, 0, (double[]) data);
-                    break;
-            }
+            mat.data().capacity(data.length);
+            mat.data().put(data);
+//            switch (type) {
+//                case CvType.CV_8S:
+//                case CvType.CV_8U:
+//                    mat.put(0, 0, (byte[]) data);
+//                    break;
+//                case CvType.CV_16S:
+//                case CvType.CV_16U:
+//                    mat.put(0, 0, (short[]) data);
+//                    break;
+//                case CvType.CV_32S:
+//                    mat.put(0, 0, (int[]) data);
+//                    break;
+//                case CvType.CV_32F:
+//                    mat.put(0, 0, (float[]) data);
+//                    break;
+//                case CvType.CV_64F:
+//                    mat.put(0, 0, (double[]) data);
+//                    break;
+//            }
             return mat;
         } catch (IOException | ClassNotFoundException | ClassCastException ex) {
             System.err.println("ERROR: Could not load mat from file: " + path);
-//            Logger.getLogger(ImageClassifier.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(Util.class.getName()).log(Level.SEVERE, null, ex);
         }
         return null;
     }
-    
+
+    public static Mat fromByteJPEG(byte[] data, boolean grayscale) {
+        return opencv_imgcodecs.imdecode(new Mat(data), grayscale ? opencv_imgcodecs.CV_LOAD_IMAGE_GRAYSCALE : opencv_imgcodecs.CV_LOAD_IMAGE_UNCHANGED);
+    }
+
 }

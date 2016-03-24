@@ -18,12 +18,13 @@ package com.oetermann.imageclassifier;
 
 import java.util.Arrays;
 import java.util.List;
-import org.opencv.core.CvType;
-import org.opencv.core.DMatch;
-import org.opencv.core.Mat;
-import org.opencv.core.MatOfDMatch;
-import org.opencv.features2d.DescriptorMatcher;
-
+import org.bytedeco.javacpp.opencv_core;
+import org.bytedeco.javacpp.opencv_core.DMatch;
+import org.bytedeco.javacpp.opencv_core.DMatchVector;
+import org.bytedeco.javacpp.opencv_core.Mat;
+import org.bytedeco.javacpp.opencv_core.MatVector;
+import org.bytedeco.javacpp.opencv_features2d;
+import org.bytedeco.javacpp.opencv_features2d.DescriptorMatcher;
 /**
  *
  * @author Lars Oetermann <lars.oetermann.com>
@@ -34,24 +35,24 @@ public class MatchFinderWrapper {
     private final String[] imageNames;
     private final double[] matchesPerImage;
 
-    public MatchFinderWrapper(String fromFile) {
-        matcher = DescriptorMatcher.create(DescriptorMatcher.FLANNBASED);
-        matcher.read(fromFile);
-        this.matchesPerImage = new double[matcher.getTrainDescriptors().size()];
-        imageNames = new String[matcher.getTrainDescriptors().size()];
-        for (int i = 0; i < imageNames.length; i++) {
-            imageNames[i] = "Image#" + i;
-        }
-    }
+//    public MatchFinderWrapper(String fromFile) {
+//        matcher = new opencv_features2d.FlannBasedMatcher();
+////        matcher.read(fromFile);
+//        this.matchesPerImage = new double[matcher.getTrainDescriptors().size()];
+//        imageNames = new String[matcher.getTrainDescriptors().size()];
+//        for (int i = 0; i < imageNames.length; i++) {
+//            imageNames[i] = "Image#" + i;
+//        }
+//    }
 
-    public MatchFinderWrapper(List<String> images, List<Mat> descriptors) {
-        matcher = DescriptorMatcher.create(DescriptorMatcher.FLANNBASED);
-        descriptors.stream().forEach((descriptor) -> {
-            descriptor.convertTo(descriptor, CvType.CV_32F);
-        });
+    public MatchFinderWrapper(List<String> images, MatVector descriptors) {
+        matcher = new opencv_features2d.FlannBasedMatcher();
+        for (int i = 0; i < descriptors.size(); i++) {
+            descriptors.get(i).convertTo(descriptors.get(i), opencv_core.CV_32F);
+        }
         matcher.add(descriptors);
         matcher.train();
-        matchesPerImage = new double[descriptors.size()];
+        matchesPerImage = new double[(int)descriptors.size()];
         imageNames = new String[images.size()];
         for (int i = 0; i < images.size(); i++) {
             String name = images.get(i);
@@ -67,19 +68,20 @@ public class MatchFinderWrapper {
     }
 
     public int bestMatch(Mat queryDescriptors, int minMatches) {
-        queryDescriptors.convertTo(queryDescriptors, CvType.CV_32F);
-        MatOfDMatch matches = new MatOfDMatch();
+        queryDescriptors.convertTo(queryDescriptors, opencv_core.CV_32F);
+        DMatchVector matches = new DMatchVector();
         matcher.match(queryDescriptors, matches);
         queryDescriptors.empty(); // Attempt to stop GC from releasing mat
         Arrays.fill(matchesPerImage, 0);
-        DMatch[] matchesArray = matches.toArray();
-        for (DMatch match : matchesArray) {
+        for (int i = 0; i < matches.size(); i++) {
+            DMatch match = matches.get(i);
 //            match.distance;
-            if (match.distance > 1) {
-                match.distance = match.distance / 1000;
+            float distance = match.distance();
+            if (distance > 1) {
+                distance = distance / 1000;
             }
-            if (match.distance < 1) {
-                matchesPerImage[match.imgIdx] += 1 - match.distance;
+            if (distance < 1) {
+                matchesPerImage[match.imgIdx()] += 1 - distance;
             }
 //            matchesPerImage[match.imgIdx] += 1;
 //            System.out.println("MatchDistance: "+match.distance + "\t\tImage: "+ imageNames[match.imgIdx]);
@@ -98,15 +100,15 @@ public class MatchFinderWrapper {
         return -1;
     }
 
-    public void release() {
-        matcher.getTrainDescriptors().stream().forEach((trainDescriptor) -> {
-            trainDescriptor.release();
-        });
-        matcher.clear();
-    }
+//    public void release() {
+//        matcher.getTrainDescriptors().stream().forEach((trainDescriptor) -> {
+//            trainDescriptor.release();
+//        });
+//        matcher.clear();
+//    }
 
-    public void save(String toFile) {
-        matcher.write(toFile);
-    }
+//    public void save(String toFile) {
+//        matcher.write(toFile);
+//    }
 
 }

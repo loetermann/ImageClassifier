@@ -16,16 +16,17 @@
  */
 package com.oetermann.imageclassifier;
 
-import java.io.File;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.ListIterator;
-import org.opencv.core.Mat;
-import org.opencv.core.MatOfKeyPoint;
-import org.opencv.features2d.DescriptorExtractor;
-import org.opencv.features2d.FeatureDetector;
-import org.opencv.imgcodecs.Imgcodecs;
-import org.opencv.imgproc.Imgproc;
+import org.bytedeco.javacpp.opencv_core.KeyPointVector;
+import org.bytedeco.javacpp.opencv_core.KeyPointVectorVector;
+import org.bytedeco.javacpp.opencv_core.Mat;
+import org.bytedeco.javacpp.opencv_core.MatVector;
+import org.bytedeco.javacpp.opencv_features2d;
+import org.bytedeco.javacpp.opencv_features2d.Feature2D;
+import org.bytedeco.javacpp.opencv_imgcodecs;
+import org.bytedeco.javacpp.opencv_imgproc;
+import org.bytedeco.javacpp.opencv_xfeatures2d;
 
 /**
  *
@@ -33,64 +34,70 @@ import org.opencv.imgproc.Imgproc;
  */
 public class DescriptorExtractorWrapper {
 
-    private final FeatureDetector featureDetector;
-    private final DescriptorExtractor descriptorExtractor;
+    private final Feature2D feature2D;
 
-    public DescriptorExtractorWrapper(int detectorType, int extractorType) {
-        featureDetector = FeatureDetector.create(detectorType);
-        descriptorExtractor = DescriptorExtractor.create(extractorType);
+    public DescriptorExtractorWrapper(String detectorType) {
+        switch (detectorType) {
+            case "SURF":
+                feature2D = opencv_xfeatures2d.SURF.create();
+                break;
+            case "ORB":
+            default:
+                feature2D = opencv_features2d.ORB.create();
+                break;
+        }
     }
-    
+
     public DescriptorExtractorWrapper() {
-        this(FeatureDetector.ORB, FeatureDetector.ORB);
+        this("");
     }
 
-    public List<Mat> readImages(List<String> files, boolean grayscale) {
-        List<Mat> images = new ArrayList<>();
+    public MatVector readImages(List<String> files, boolean grayscale) {
+        MatVector images = new MatVector(files.size());
         Mat mat;
 
+        long i = 0;
         for (ListIterator<String> it = files.listIterator(); it.hasNext();) {
             String file = it.next();
-            mat = Imgcodecs.imread(file);
+            
+            mat = opencv_imgcodecs.imread(file);
             if (mat.dims() > 0 && mat.cols() > 0 && mat.rows() > 0) {
                 if (grayscale) {
-                    Imgproc.cvtColor(mat, mat, Imgproc.COLOR_RGB2GRAY);
+                    opencv_imgproc.cvtColor(mat, mat, opencv_imgproc.COLOR_RGB2GRAY);
                 }
-                images.add(mat);
+                images.put(i, mat);
+                i++;
             } else {
                 it.remove();
                 System.out.println("Cannot read file: " + file);
             }
         }
+        images.resize(i);
         return images;
     }
 
-    public List<Mat> detectAndCompute(List<String> images, boolean grayscale) {
-        List<Mat> imageList = readImages(images, grayscale);
-        List<Mat> descriptors = detectAndCompute(imageList);
-        imageList.stream().forEach((image) -> {
-            image.release();
-        });
+    public MatVector detectAndCompute(List<String> images, boolean grayscale) {
+        MatVector imageList = readImages(images, grayscale);
+        MatVector descriptors = detectAndCompute(imageList);
+//        imageList.stream().forEach((image) -> {
+//            image.release();
+//        });
         return descriptors;
     }
 
-    public List<Mat> detectAndCompute(List<Mat> images) {
-        List<MatOfKeyPoint> keypoints = new ArrayList<>();
-        featureDetector.detect(images, keypoints);
-        List<Mat> descriptors = new ArrayList<>();
-        descriptorExtractor.compute(images, keypoints, descriptors);
-        keypoints.stream().forEach((keypoint) -> {
-            keypoint.release();
-        });
+    public MatVector detectAndCompute(MatVector images) {        
+        KeyPointVectorVector keypoints = new KeyPointVectorVector();
+        feature2D.detect(images, keypoints);
+        MatVector descriptors = new MatVector();
+        feature2D.compute(images, keypoints, descriptors);
         return descriptors;
     }
 
     public Mat detectAndCompute(Mat image) {
-        MatOfKeyPoint keypoint = new MatOfKeyPoint();
-        featureDetector.detect(image, keypoint);
+        KeyPointVector keypoint = new KeyPointVector();
+        feature2D.detect(image, keypoint);
         Mat descriptor = new Mat();
-        descriptorExtractor.compute(image, keypoint, descriptor);
-        keypoint.release();
+        feature2D.compute(image, keypoint, descriptor);
         return descriptor;
     }
 
