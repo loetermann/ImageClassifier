@@ -21,6 +21,10 @@ import java.util.HashMap;
 import java.util.List;
 import org.opencv.core.Core;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfByte;
+import org.opencv.features2d.DescriptorExtractor;
+import org.opencv.features2d.FeatureDetector;
+import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 
 /**
@@ -38,11 +42,32 @@ public class ImageClassifier {
     private final DescriptorExtractorWrapper descriptorExtractorWrapper;
     private final HashMap<String, MatchFinderWrapper> flannMatchers;
 
+    public ImageClassifier(String extractorType) {
+        switch (extractorType) {
+            case "ORB":
+                descriptorExtractorWrapper = new DescriptorExtractorWrapper(FeatureDetector.ORB, DescriptorExtractor.ORB);
+                break;
+            case "SURF":
+                descriptorExtractorWrapper = new DescriptorExtractorWrapper(FeatureDetector.SURF, DescriptorExtractor.SURF);
+                break;
+            case "BRISK":
+                descriptorExtractorWrapper = new DescriptorExtractorWrapper(FeatureDetector.BRISK, DescriptorExtractor.BRISK);
+                break;
+            case "AKAZE":
+                descriptorExtractorWrapper = new DescriptorExtractorWrapper(FeatureDetector.AKAZE, DescriptorExtractor.AKAZE);
+                break;
+            default:
+                descriptorExtractorWrapper = new DescriptorExtractorWrapper();
+                break;
+        }
+        this.flannMatchers = new HashMap<>();
+    }
+
     public ImageClassifier(int detectorType, int extractorType) {
         this.descriptorExtractorWrapper = new DescriptorExtractorWrapper(detectorType, extractorType);
         this.flannMatchers = new HashMap<>();
     }
-    
+
     public ImageClassifier() {
         this.descriptorExtractorWrapper = new DescriptorExtractorWrapper();
         this.flannMatchers = new HashMap<>();
@@ -158,6 +183,10 @@ public class ImageClassifier {
             return "Unkown Matcher: " + matcherName;
         }
         return flannMatchers.get(matcherName).nameOf(match(matcherName, queryImage, minMatches));
+    }
+
+    public String matchName(String matcherName, byte[] data, int minMatches) {
+        return matchName(matcherName, Imgcodecs.imdecode(new MatOfByte(data), Imgcodecs.CV_LOAD_IMAGE_UNCHANGED), minMatches);
     }
 
 }
