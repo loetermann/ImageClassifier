@@ -78,7 +78,7 @@ public class ImageClassifier {
     public void trainMatcherWithDescriptors(String name, boolean recursivly, String... descriptors) {
         List<String> descriptorFiles = new ArrayList<>();
         for (String descriptor : descriptors) {
-            descriptorFiles.addAll(Util.listFiles(descriptor, recursivly, ".descr"));
+            descriptorFiles.addAll(Util.listFiles(descriptor, recursivly, descriptorExtractorWrapper.getDescriptorEnding()));
         }
         trainMatcherWithDescriptors(name, descriptorFiles);
     }
@@ -86,7 +86,7 @@ public class ImageClassifier {
     public void trainMatcherWithDescriptors(String name, boolean recursivly, List<String> descriptors) {
         List<String> descriptorFiles = new ArrayList<>();
         descriptors.stream().forEach((path) -> {
-            descriptorFiles.addAll(Util.listFiles(path, recursivly, ".descr"));
+            descriptorFiles.addAll(Util.listFiles(path, recursivly, descriptorExtractorWrapper.getDescriptorEnding()));
         });
         trainMatcherWithDescriptors(name, descriptorFiles);
     }
@@ -129,7 +129,8 @@ public class ImageClassifier {
             outputPath += "/";
         }
         for (int i = 0; i < images.size(); i++) {
-            Util.saveMat(outputPath + images.get(i).replaceFirst(baseDir, "") + ".descr", descriptors.get(i));
+            Util.saveMat(outputPath + images.get(i).replaceFirst(baseDir, "")
+                    + descriptorExtractorWrapper.getDescriptorEnding(), descriptors.get(i));
             descriptors.get(i).release();
         }
     }
@@ -164,6 +165,14 @@ public class ImageClassifier {
 
     public String matchName(String matcherName, byte[] jpegByte, int minMatches) {
         return matchName(matcherName, Util.fromByteJPEG(jpegByte, false), minMatches);
+    }
+
+    public HashMap<String, MatchFinderWrapper> getFlannMatchers() {
+        return flannMatchers;
+    }
+
+    public DescriptorExtractorWrapper getDescriptorExtractorWrapper() {
+        return descriptorExtractorWrapper;
     }
 
 }

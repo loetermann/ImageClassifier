@@ -56,7 +56,7 @@ public class MatchFinderWrapper {
         imageNames = new String[images.size()];
         for (int i = 0; i < images.size(); i++) {
             String name = images.get(i);
-            imageNames[i] = name.substring(name.lastIndexOf('/') + 1, name.contains(".descr") ? name.indexOf(".descr") : name.length());
+            imageNames[i] = name.substring(name.lastIndexOf('/') + 1); //, name.contains(".descr") ? name.indexOf(".descr") : name.length());
         }
     }
 

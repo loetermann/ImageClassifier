@@ -35,21 +35,28 @@ import org.bytedeco.javacpp.opencv_xfeatures2d;
 public class DescriptorExtractorWrapper {
 
     private final Feature2D feature2D;
+    private final DetectorType detectorType;
 
-    public DescriptorExtractorWrapper(String detectorType) {
+    public DescriptorExtractorWrapper(DetectorType detectorType) {
         switch (detectorType) {
-            case "SURF":
+            case SURF:
                 feature2D = opencv_xfeatures2d.SURF.create();
                 break;
-            case "ORB":
-            default:
+            case ORB:
                 feature2D = opencv_features2d.ORB.create();
                 break;
+            default:
+                throw new IllegalArgumentException("Unsupported detector type: " + detectorType);
         }
+        this.detectorType = detectorType;
+    }
+
+    public DescriptorExtractorWrapper(String detectorType) {
+        this(DetectorType.valueOf(detectorType));
     }
 
     public DescriptorExtractorWrapper() {
-        this("");
+        this(DetectorType.ORB);
     }
 
     public MatVector readImages(List<String> files, boolean grayscale) {
@@ -59,7 +66,7 @@ public class DescriptorExtractorWrapper {
         long i = 0;
         for (ListIterator<String> it = files.listIterator(); it.hasNext();) {
             String file = it.next();
-            
+
             mat = opencv_imgcodecs.imread(file);
             if (mat.dims() > 0 && mat.cols() > 0 && mat.rows() > 0) {
                 if (grayscale) {
@@ -85,7 +92,7 @@ public class DescriptorExtractorWrapper {
         return descriptors;
     }
 
-    public MatVector detectAndCompute(MatVector images) {        
+    public MatVector detectAndCompute(MatVector images) {
         KeyPointVectorVector keypoints = new KeyPointVectorVector();
         feature2D.detect(images, keypoints);
         MatVector descriptors = new MatVector();
@@ -99,6 +106,18 @@ public class DescriptorExtractorWrapper {
         Mat descriptor = new Mat();
         feature2D.compute(image, keypoint, descriptor);
         return descriptor;
+    }
+
+    public String getDescriptorEnding() {
+        return "." + detectorType.name().toLowerCase() + ".descr";
+    }
+
+    public DetectorType getDetectorType() {
+        return detectorType;
+    }
+
+    public static enum DetectorType {
+        SURF, ORB;
     }
 
 }
